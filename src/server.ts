@@ -1,5 +1,4 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
 import {
   writeMemory,
   listMemories,
@@ -9,8 +8,6 @@ import {
   cleanExpiredDaily,
 } from './storage.js';
 import { MemoryLayer } from './types.js';
-
-const LayerEnum = z.enum(['deep', 'daily', 'diary', 'writing']);
 
 export function createServer(): McpServer {
   const server = new McpServer({
@@ -22,10 +19,14 @@ export function createServer(): McpServer {
     title: 'write memory',
     description: 'Write a new memory. Layers: deep=core long-term, daily=expires in 3 days, diary=journal, writing=creative progress.',
     inputSchema: {
-      content: z.string().min(1),
-      layer: LayerEnum,
-      tags: z.array(z.string()).optional(),
-      source: z.string().optional(),
+      type: 'object' as const,
+      properties: {
+        content: { type: 'string', description: 'Memory content' },
+        layer: { type: 'string', enum: ['deep', 'daily', 'diary', 'writing'] },
+        tags: { type: 'array', items: { type: 'string' } },
+        source: { type: 'string' },
+      },
+      required: ['content', 'layer'],
     },
   }, async (args: any) => {
     const mem = await writeMemory({
@@ -39,12 +40,15 @@ export function createServer(): McpServer {
 
   server.registerTool('memory_read', {
     title: 'read memories',
-    description: 'Read memories. Filter by layer, tags, or keyword. Default limit 50, newest first.',
+    description: 'Read memories. Filter by layer, tags, or keyword. Default limit 50.',
     inputSchema: {
-      layer: LayerEnum.optional(),
-      tags: z.array(z.string()).optional(),
-      keyword: z.string().optional(),
-      limit: z.number().int().min(1).max(200).optional(),
+      type: 'object' as const,
+      properties: {
+        layer: { type: 'string', enum: ['deep', 'daily', 'diary', 'writing'] },
+        tags: { type: 'array', items: { type: 'string' } },
+        keyword: { type: 'string' },
+        limit: { type: 'number' },
+      },
     },
   }, async (args: any) => {
     const memories = await listMemories({
@@ -67,9 +71,13 @@ export function createServer(): McpServer {
     title: 'search memories',
     description: 'Full-text search across memory content and tags.',
     inputSchema: {
-      query: z.string().min(1),
-      layer: LayerEnum.optional(),
-      limit: z.number().int().min(1).max(100).optional(),
+      type: 'object' as const,
+      properties: {
+        query: { type: 'string' },
+        layer: { type: 'string', enum: ['deep', 'daily', 'diary', 'writing'] },
+        limit: { type: 'number' },
+      },
+      required: ['query'],
     },
   }, async (args: any) => {
     const memories = await listMemories({
@@ -91,10 +99,14 @@ export function createServer(): McpServer {
     title: 'update memory',
     description: 'Update content, tags, or source of a memory by ID.',
     inputSchema: {
-      id: z.string(),
-      content: z.string().optional(),
-      tags: z.array(z.string()).optional(),
-      source: z.string().optional(),
+      type: 'object' as const,
+      properties: {
+        id: { type: 'string' },
+        content: { type: 'string' },
+        tags: { type: 'array', items: { type: 'string' } },
+        source: { type: 'string' },
+      },
+      required: ['id'],
     },
   }, async (args: any) => {
     const updated = await updateMemory(args.id, {
@@ -112,9 +124,13 @@ export function createServer(): McpServer {
 
   server.registerTool('memory_delete', {
     title: 'delete memory',
-    description: 'Delete a memory by ID and clean up all related indexes.',
+    description: 'Delete a memory by ID.',
     inputSchema: {
-      id: z.string(),
+      type: 'object' as const,
+      properties: {
+        id: { type: 'string' },
+      },
+      required: ['id'],
     },
   }, async (args: any) => {
     const success = await deleteMemory(args.id);
@@ -129,7 +145,10 @@ export function createServer(): McpServer {
   server.registerTool('memory_stats', {
     title: 'memory stats',
     description: 'View memory counts by layer. Also cleans expired daily memories.',
-    inputSchema: {},
+    inputSchema: {
+      type: 'object' as const,
+      properties: {},
+    },
   }, async (_args: any) => {
     const cleaned = await cleanExpiredDaily();
     const stats = await getStats();
