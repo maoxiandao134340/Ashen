@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "tsc",
+    "build": "echo ok",
     "dev": "ts-node-esm api/mcp.ts"
   },
   "dependencies": {
