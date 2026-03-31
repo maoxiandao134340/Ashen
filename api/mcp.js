@@ -179,7 +179,7 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
 
   try {
-    const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
+    const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
     res.on('close', () => transport.close());
     const server = createServer();
     await server.connect(transport);
