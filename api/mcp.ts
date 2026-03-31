@@ -2,6 +2,7 @@ const { McpServer } = require('@modelcontextprotocol/sdk/server/mcp.js');
 const { StreamableHTTPServerTransport } = require('@modelcontextprotocol/sdk/server/streamableHttp.js');
 const { Redis } = require('@upstash/redis');
 const { nanoid } = require('nanoid');
+const { inject } = require('@vercel/analytics');
 
 function getRedis() {
   return new Redis({
@@ -175,7 +176,42 @@ module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Mcp-Session-Id');
 
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
-  if (req.method === 'GET') { res.status(200).json({ ok: true, name: 'ashen-memory-mcp-server' }); return; }
+  if (req.method === 'GET') { 
+    // Initialize Vercel Analytics for browser-based access
+    inject();
+    
+    // Return HTML response with analytics enabled
+    res.setHeader('Content-Type', 'text/html');
+    res.status(200).send(`
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Ashen Memory MCP Server</title>
+        <script>
+          window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+        </script>
+        <script defer src="/_vercel/insights/script.js"></script>
+        <style>
+          body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; line-height: 1.6; }
+          h1 { color: #333; }
+          .status { color: #22c55e; font-weight: bold; }
+          pre { background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        </style>
+      </head>
+      <body>
+        <h1>Ashen Memory MCP Server</h1>
+        <p><span class="status">Status: OK</span></p>
+        <p>This is a Model Context Protocol (MCP) server for memory management.</p>
+        <h2>API Information</h2>
+        <pre>${JSON.stringify({ ok: true, name: 'ashen-memory-mcp-server', version: '1.0.0' }, null, 2)}</pre>
+        <p><small>Powered by Vercel. Analytics enabled.</small></p>
+      </body>
+      </html>
+    `);
+    return; 
+  }
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
 
   try {
